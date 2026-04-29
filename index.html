@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Freight Calculator PRO</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;900&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+
+:root{
+  --steel:#1a2332;
+  --steel-mid:#243147;
+  --steel-light:#2e3f5a;
+  --accent:#f4a012;
+  --accent2:#e8520a;
+  --rail:#8a9bb0;
+  --surface:#1e2d42;
+  --card:#243147;
+  --border:rgba(138,155,176,0.25);
+  --text:#e8edf4;
+  --muted:#7a8fa8;
+  --green:#22c55e;
+  --red:#ef4444;
+}
+
+html,body{
+  font-family:'Barlow',sans-serif;
+  background:var(--steel);
+  color:var(--text);
+  min-height:100vh;
+  font-size:14px;
+}
+
+/* HEADER */
+.train-header{
+  background:var(--steel-mid);
+  border-bottom:3px solid var(--accent);
+  padding:0;
+  position:relative;
+}
+.header-inner{
+  display:flex;align-items:center;gap:16px;
+  padding:20px 24px 24px;
+}
+.header-title{
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:28px;font-weight:900;
+  color:var(--accent);
+  letter-spacing:2px;
+  text-transform:uppercase;
+}
+.header-sub{
+  font-size:12px;color:var(--muted);letter-spacing:3px;text-transform:uppercase;margin-top:2px;
+}
+.rail-track{
+  height:8px;background:var(--steel-mid);
+  border-top:2px solid var(--accent);
+  display:flex;align-items:center;padding:0 24px;gap:20px;
+}
+.rail-tie{width:12px;height:4px;background:var(--muted);border-radius:2px;}
+
+/* TABS */
+.tabs-bar{
+  background:var(--steel-mid);
+  padding:0 24px;
+  border-bottom:1px solid var(--border);
+}
+.tabs{display:flex;gap:0;}
+.tab{
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:13px;font-weight:700;letter-spacing:1px;text-transform:uppercase;
+  padding:12px 20px;border-bottom:2px solid transparent;
+  cursor:pointer;color:var(--muted);transition:all 0.2s;
+}
+.tab.active{color:var(--accent);border-bottom:2px solid var(--accent);}
+.tab-panel{display:none;}
+.tab-panel.active{display:block;}
+
+/* LAYOUT */
+.main{display:grid;grid-template-columns:1fr 1fr;min-height:calc(100vh - 160px);}
+.panel{padding:20px 24px;border-right:1px solid var(--border);}
+.panel:last-child{border-right:none;}
+
+/* SECTION LABELS */
+.section-label{
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:12px;font-weight:700;letter-spacing:3px;
+  color:var(--accent);text-transform:uppercase;
+  margin-bottom:12px;
+  display:flex;align-items:center;gap:8px;
+}
+.section-label::after{content:'';flex:1;height:1px;background:var(--border);}
+
+/* FORMS */
+label{font-size:12px;color:var(--muted);display:block;margin-bottom:4px;letter-spacing:0.5px;}
+input,select{
+  width:100%;background:var(--surface);
+  border:1px solid var(--border);border-radius:6px;
+  color:var(--text);padding:9px 12px;font-size:13px;
+  font-family:'Barlow',sans-serif;
+  outline:none;transition:border-color 0.2s;
+}
+input:focus,select:focus{border-color:var(--accent);}
+select option{background:var(--steel-mid);}
+.row{display:grid;gap:10px;margin-bottom:12px;}
+.row.c2{grid-template-columns:1fr 1fr;}
+.row.c3{grid-template-columns:1fr 1fr 1fr;}
+
+/* BUTTONS */
+.btn{
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:13px;font-weight:700;letter-spacing:1px;
+  padding:9px 18px;border:none;border-radius:6px;
+  cursor:pointer;transition:all 0.15s;text-transform:uppercase;
+}
+.btn-primary{background:var(--accent);color:#000;}
+.btn-primary:hover{background:#e8960a;}
+.btn-secondary{background:var(--steel-light);color:var(--text);border:1px solid var(--border);}
+.btn-secondary:hover{background:var(--steel-mid);}
+.btn-danger{background:rgba(239,68,68,0.15);color:var(--red);border:1px solid rgba(239,68,68,0.3);}
+.btn-danger:hover{background:rgba(239,68,68,0.25);}
+.btn-green{background:rgba(34,197,94,0.15);color:var(--green);border:1px solid rgba(34,197,94,0.3);}
+.btn-green:hover{background:rgba(34,197,94,0.25);}
+.btn-sm{padding:5px 10px;font-size:11px;}
+.btn-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;}
+
+/* COST TABLE */
+.cost-table{width:100%;border-collapse:collapse;margin-top:4px;}
+.cost-table th{
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:11px;letter-spacing:2px;text-transform:uppercase;
+  color:var(--muted);padding:8px 6px;border-bottom:1px solid var(--border);
+  text-align:left;font-weight:600;
+}
+.cost-table td{padding:5px 4px;border-bottom:1px solid rgba(138,155,176,0.1);}
+.cost-table tr:hover td{background:rgba(255,255,255,0.03);}
+.cost-table input{padding:6px 8px;font-size:12px;}
+.cost-table select{padding:6px 8px;font-size:12px;}
+.del-btn{
+  background:none;border:none;color:var(--muted);cursor:pointer;
+  font-size:16px;padding:4px 6px;border-radius:4px;transition:all 0.15s;
+}
+.del-btn:hover{background:rgba(239,68,68,0.15);color:var(--red);}
+
+/* ROUTES */
+.route-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:8px;padding:12px;margin-bottom:8px;
+  position:relative;
+}
+.route-card .rdel{
+  position:absolute;top:8px;right:8px;
+  background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px;line-height:1;
+  transition:color 0.15s;
+}
+.route-card .rdel:hover{color:var(--red);}
+
+/* TOTAL */
+.total-box{
+  background:var(--steel-mid);
+  border:2px solid var(--accent);
+  border-radius:10px;padding:16px 20px;margin-top:16px;
+}
+.total-label{font-size:11px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;}
+.total-value{
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:36px;font-weight:900;color:var(--accent);margin-top:4px;
+}
+.total-breakdown{font-size:11px;color:var(--muted);margin-top:6px;}
+
+/* STORAGE */
+.storage-result{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:6px;padding:12px;margin-top:10px;
+  font-family:'Barlow Condensed',sans-serif;font-size:15px;
+  display:none;
+}
+
+/* HISTORY TABLE */
+.history-table{width:100%;border-collapse:collapse;font-size:12px;}
+.history-table th{
+  font-family:'Barlow Condensed',sans-serif;font-size:10px;
+  letter-spacing:2px;text-transform:uppercase;color:var(--muted);
+  padding:8px;border-bottom:1px solid var(--border);text-align:left;
+}
+.history-table td{padding:8px;border-bottom:1px solid rgba(138,155,176,0.08);}
+.history-table tr:hover td{background:rgba(255,255,255,0.03);}
+
+/* TEMPLATE EDITOR */
+.template-editor{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:8px;padding:14px;margin-top:10px;
+}
+.chip{
+  display:inline-flex;align-items:center;gap:6px;
+  background:var(--steel-light);border:1px solid var(--border);
+  border-radius:20px;padding:4px 10px;font-size:11px;
+  margin:3px;color:var(--text);
+}
+.chip .cx{color:var(--muted);font-size:13px;cursor:pointer;line-height:1;}
+.chip .cx:hover{color:var(--red);}
+.chips-wrap{margin-top:8px;}
+.badge{
+  display:inline-block;padding:2px 8px;border-radius:10px;
+  font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;
+}
+.badge-amber{background:rgba(244,160,18,0.2);color:var(--accent);}
+.badge-green{background:rgba(34,197,94,0.2);color:var(--green);}
+
+/* MODAL */
+.modal-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,0.75);
+  display:none;align-items:center;justify-content:center;
+  z-index:1000;
+}
+.modal-overlay.open{display:flex;}
+.modal{
+  background:var(--steel-mid);border:1px solid var(--accent);
+  border-radius:12px;padding:24px;width:90%;max-width:460px;
+}
+.modal h3{
+  font-family:'Barlow Condensed',sans-serif;font-size:20px;
+  font-weight:700;color:var(--accent);margin-bottom:16px;
+  letter-spacing:1px;text-transform:uppercase;
+}
+
+.divider{height:1px;background:var(--border);margin:16px 0;}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-track{background:var(--steel);}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="train-header">
+  <div class="header-inner">
+    <div style="font-size:42px;line-height:1;">🚂</div>
+    <div>
+      <div class="header-title">Freight Calculator PRO</div>
+      <div class="header-sub">Cargo &middot; Sea &middot; Rail &middot; Road</div>
+    </div>
+    <div style="margin-left:auto;text-align:right;">
+      <div style="font-size:11px;color:var(--muted);">Сегодня</div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;" id="todayDate"></div>
+    </div>
+  </div>
+</div>
+<div class="rail-track">
+  <div class="rail-tie"></div><div class="rail-tie"></div>
+  <div class="rail-tie"></div><div class="rail-tie"></div>
+  <div class="rail-tie"></div><div class="rail-tie"></div>
+</div>
+
+<!-- TABS BAR -->
+<div class="tabs-bar">
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('calc',this)">&#128220; Расчёт</div>
+    <div class="tab" onclick="switchTab('templates',this)">&#128230; Шаблоны расходов</div>
+    <div class="tab" onclick="switchTab('history',this)">&#128200; История</div>
+  </div>
+</div>
+
+<!-- TAB: CALC -->
+<div class="tab-panel active" id="tab-calc">
+  <div class="main">
+
+    <!-- LEFT PANEL -->
+    <div class="panel">
+      <div class="section-label">&#128203; Реквизиты</div>
+      <div class="row c2">
+        <div><label>Клиент</label><input id="client" placeholder="Название клиента"></div>
+        <div><label>Букинг</label><input id="booking" placeholder="№ букинга"></div>
+      </div>
+
+      <div class="section-label" style="margin-top:16px;">&#128674; Линия &amp; Транспорт</div>
+      <div class="row c2">
+        <div>
+          <label>Линия</label>
+          <div style="display:flex;gap:6px;">
+            <select id="line" style="flex:1;" onchange="loadTemplateCosts()"></select>
+            <button class="btn btn-secondary btn-sm" onclick="openAddLineModal()" title="Добавить линию" style="padding:0 12px;">+</button>
+          </div>
+        </div>
+        <div>
+          <label>Тип транспорта</label>
+          <select id="transport" onchange="loadTemplateCosts()">
+            <option>Контейнеровоз</option>
+            <option>Тент</option>
+            <option>ЖД</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="section-label" style="margin-top:16px;">&#128506; Маршруты</div>
+      <div id="routes"></div>
+      <button class="btn btn-secondary" onclick="addRoute()" style="width:100%;margin-top:4px;">+ Добавить направление</button>
+
+      <div class="section-label" style="margin-top:20px;">&#128184; Маржа</div>
+      <div class="row c2">
+        <div><label>Маржа (USD)</label><input type="number" id="margin" placeholder="0" min="0"></div>
+        <div style="display:flex;align-items:flex-end;">
+          <button class="btn btn-primary" style="width:100%;" onclick="calculateTotal()">&#9654; Рассчитать</button>
+        </div>
+      </div>
+
+      <div class="total-box" id="totalBox" style="display:none;">
+        <div class="total-label">Итого (USD)</div>
+        <div class="total-value" id="totalValue">—</div>
+        <div class="total-breakdown" id="totalBreakdown"></div>
+      </div>
+
+      <!-- STORAGE -->
+      <div class="section-label" style="margin-top:20px;">&#128346; Хранение</div>
+      <div class="row c2">
+        <div><label>Дата начала</label><input type="date" id="startDate"></div>
+        <div><label>Дата окончания</label><input type="date" id="endDate"></div>
+      </div>
+      <div class="row c2">
+        <div><label>Ставка / день</label><input type="number" id="storageRate" placeholder="0"></div>
+        <div>
+          <label>Валюта</label>
+          <select id="storageCurrency">
+            <option value="USD">USD</option>
+            <option value="EUR">EUR</option>
+            <option value="UAH">UAH</option>
+          </select>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-secondary" onclick="calculateStorage()">Посчитать хранение</button>
+        <button class="btn btn-green btn-sm" onclick="addStorageCost()">+ В расходы</button>
+      </div>
+      <div class="storage-result" id="storageResult"></div>
+    </div>
+
+    <!-- RIGHT PANEL -->
+    <div class="panel">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <div class="section-label" style="margin-bottom:0;flex:1;">&#128230; Расходы</div>
+        <div style="display:flex;gap:6px;margin-left:12px;">
+          <button class="btn btn-secondary btn-sm" onclick="loadTemplateCosts()">&#128196; Автозаполнение</button>
+          <button class="btn btn-secondary btn-sm" onclick="addCostRow()">+ Расход</button>
+        </div>
+      </div>
+
+      <table class="cost-table" id="costTable">
+        <thead>
+          <tr>
+            <th style="width:42%;">Название</th>
+            <th style="width:18%;">Сумма</th>
+            <th style="width:13%;">Вал.</th>
+            <th style="width:16%;text-align:center;" title="Умножать на кол-во контейнеров">На ед.</th>
+            <th style="width:30px;"></th>
+          </tr>
+        </thead>
+        <tbody id="costBody"></tbody>
+      </table>
+
+      <div class="btn-row" style="margin-top:20px;">
+        <button class="btn btn-green" onclick="saveRecord()">&#128190; Сохранить</button>
+        <button class="btn btn-secondary" onclick="exportClientExcel()">&#128196; Excel клиент</button>
+        <button class="btn btn-secondary" onclick="exportFullExcel()">&#128196; Excel полный</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- TAB: TEMPLATES -->
+<div class="tab-panel" id="tab-templates">
+  <div style="padding:24px;max-width:860px;">
+    <div class="section-label">&#128230; Шаблоны обязательных расходов</div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:20px;">
+      Настройте список расходов для каждой комбинации «Линия + Тип транспорта». При автозаполнении будет использован именно этот шаблон.
+    </p>
+
+    <div class="row c3" style="margin-bottom:16px;">
+      <div>
+        <label>Линия</label>
+        <select id="tplLine"></select>
+      </div>
+      <div>
+        <label>Тип транспорта</label>
+        <select id="tplTransport">
+          <option>Контейнеровоз</option>
+          <option>Тент</option>
+          <option>ЖД</option>
+        </select>
+      </div>
+      <div style="display:flex;align-items:flex-end;">
+        <button class="btn btn-primary" style="width:100%;" onclick="loadTemplateEditor()">Редактировать</button>
+      </div>
+    </div>
+
+    <div class="template-editor" id="templateEditor" style="display:none;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;color:var(--accent);" id="tplEditorTitle"></div>
+        <button class="btn btn-primary btn-sm" onclick="saveTemplate()">Сохранить шаблон</button>
+      </div>
+      <div id="tplItemsList"></div>
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <input id="newTplItem" placeholder="Новый расход...">
+        <button class="btn btn-secondary btn-sm" onclick="addTplItem()" style="white-space:nowrap;">+ Добавить</button>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+    <div class="section-label">&#128674; Управление линиями</div>
+    <div style="display:flex;gap:8px;margin-bottom:12px;">
+      <input id="newLineInput" placeholder="Название новой линии...">
+      <button class="btn btn-primary" onclick="addLineFromSettings()" style="white-space:nowrap;">+ Добавить</button>
+    </div>
+    <div class="chips-wrap" id="linesChips"></div>
+  </div>
+</div>
+
+<!-- TAB: HISTORY -->
+<div class="tab-panel" id="tab-history">
+  <div style="padding:24px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <div class="section-label" style="margin-bottom:0;flex:1;">&#128200; История расчётов</div>
+      <button class="btn btn-danger btn-sm" onclick="clearHistory()">&#128465; Очистить</button>
+    </div>
+    <table class="history-table">
+      <thead>
+        <tr>
+          <th>Дата</th>
+          <th>Клиент</th>
+          <th>Букинг</th>
+          <th>Линия</th>
+          <th>Тип</th>
+          <th>Итого USD</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="historyBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- MODAL: Add Line -->
+<div class="modal-overlay" id="modalAddLine">
+  <div class="modal">
+    <h3>+ Добавить линию</h3>
+    <label>Название линии</label>
+    <input id="modalLineInput" placeholder="например: HAPAG-LLOYD" style="margin:8px 0 16px;">
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="confirmAddLine()">Добавить</button>
+      <button class="btn btn-secondary" onclick="closeModal('modalAddLine')">Отмена</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== DEFAULT DATA =====
+const DEFAULT_TEMPLATES = {
+  "Контейнеровоз": ["THC","Import Merchant Haulage Fee","ISPS","Carrier's Release Fee","Container Maintenance Repair Fee","Fuel Energy Transition Charge","Custom transit document - T1","DSK document","Уточнение к Т1","Авто"],
+  "Тент": ["THC","Import Merchant Haulage Fee","ISPS","Carrier's Release Fee","Container Maintenance Repair Fee","Fuel Energy Transition Charge","Custom transit document - T1","DSK document","Перетарка","Перемещение по порту","Уточнение к Т1","Авто"],
+  "ЖД": ["ЖД тариф","Последняя миля (авто)"]
+};
+const DEFAULT_LINES = ["MAERSK","MSC","CMA CGM","HAPAG-LLOYD","COSCO"];
+
+// ===== INIT =====
+document.getElementById('todayDate').textContent = new Date().toLocaleDateString('ru-RU',{day:'2-digit',month:'short',year:'numeric'});
+
+window.onload = () => {
+  loadLines();
+  loadTemplateCosts();
+  addRoute();
+};
+
+// ===== TABS =====
+function switchTab(name, el) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  el.classList.add('active');
+  if (name === 'templates') refreshTemplatesTab();
+  if (name === 'history') renderHistory();
+}
+
+// ===== LINES =====
+function getLines() { return JSON.parse(localStorage.getItem('fc_lines') || JSON.stringify(DEFAULT_LINES)); }
+function saveLines(lines) { localStorage.setItem('fc_lines', JSON.stringify(lines)); }
+
+function loadLines() {
+  const lines = getLines();
+  ['line', 'tplLine'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.innerHTML = '';
+    lines.forEach(l => { const o = document.createElement('option'); o.textContent = l; el.appendChild(o); });
+  });
+}
+
+function openAddLineModal() {
+  document.getElementById('modalAddLine').classList.add('open');
+  document.getElementById('modalLineInput').value = '';
+  document.getElementById('modalLineInput').focus();
+}
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function confirmAddLine() {
+  const val = document.getElementById('modalLineInput').value.trim();
+  if (!val) return;
+  const lines = getLines();
+  if (!lines.includes(val)) { lines.push(val); saveLines(lines); }
+  closeModal('modalAddLine');
+  loadLines();
+  renderLinesChips();
+}
+
+function addLineFromSettings() {
+  const val = document.getElementById('newLineInput').value.trim();
+  if (!val) return;
+  const lines = getLines();
+  if (!lines.includes(val)) { lines.push(val); saveLines(lines); }
+  document.getElementById('newLineInput').value = '';
+  loadLines(); renderLinesChips();
+}
+
+function removeLine(name) {
+  let lines = getLines().filter(l => l !== name);
+  saveLines(lines); loadLines(); renderLinesChips();
+}
+
+function renderLinesChips() {
+  const lines = getLines();
+  const wrap = document.getElementById('linesChips');
+  wrap.innerHTML = '';
+  lines.forEach(l => {
+    const chip = document.createElement('span');
+    chip.className = 'chip';
+    chip.innerHTML = `${l} <span class="cx" onclick="removeLine('${l}')">&#215;</span>`;
+    wrap.appendChild(chip);
+  });
+}
+
+function refreshTemplatesTab() { loadLines(); renderLinesChips(); }
+
+// ===== TEMPLATES PER LINE+TRANSPORT =====
+function getTplKey(line, transport) { return 'tpl_' + line + '__' + transport; }
+function getTemplate(line, transport) {
+  const stored = localStorage.getItem(getTplKey(line, transport));
+  if (stored) return JSON.parse(stored);
+  return DEFAULT_TEMPLATES[transport] || [];
+}
+function saveTemplateData(line, transport, items) {
+  localStorage.setItem(getTplKey(line, transport), JSON.stringify(items));
+}
+
+let currentTplItems = [];
+
+function loadTemplateEditor() {
+  const line = document.getElementById('tplLine').value;
+  const transport = document.getElementById('tplTransport').value;
+  currentTplItems = [...getTemplate(line, transport)];
+  document.getElementById('tplEditorTitle').textContent = line + ' / ' + transport;
+  renderTplItems();
+  document.getElementById('templateEditor').style.display = 'block';
+}
+
+function renderTplItems() {
+  const container = document.getElementById('tplItemsList');
+  container.innerHTML = '';
+  currentTplItems.forEach((item, i) => {
+    const div = document.createElement('div');
+    div.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:6px;';
+    div.innerHTML = `
+      <span style="color:var(--muted);font-size:11px;min-width:20px;text-align:right;">${i + 1}</span>
+      <input value="${item.replace(/"/g,'&quot;')}" data-idx="${i}" style="flex:1;">
+      <button class="del-btn" onclick="removeTplItem(${i})" style="font-size:18px;">&#215;</button>
+    `;
+    container.appendChild(div);
+  });
+}
+
+function addTplItem() {
+  const val = document.getElementById('newTplItem').value.trim();
+  if (!val) return;
+  currentTplItems.push(val);
+  document.getElementById('newTplItem').value = '';
+  renderTplItems();
+}
+
+function removeTplItem(i) { currentTplItems.splice(i, 1); renderTplItems(); }
+
+function saveTemplate() {
+  const line = document.getElementById('tplLine').value;
+  const transport = document.getElementById('tplTransport').value;
+  // sync input values
+  document.querySelectorAll('#tplItemsList input').forEach((inp, i) => {
+    if (i < currentTplItems.length) currentTplItems[i] = inp.value;
+  });
+  saveTemplateData(line, transport, currentTplItems);
+  const btn = event.target;
+  const orig = btn.textContent;
+  btn.textContent = '✓ Сохранено!'; btn.style.background = 'var(--green)'; btn.style.color = '#000';
+  setTimeout(() => { btn.textContent = orig; btn.style.background = ''; btn.style.color = ''; }, 1600);
+}
+
+// ===== ROUTES =====
+function addRoute() {
+  const div = document.createElement('div');
+  div.className = 'route-card';
+  div.innerHTML = `
+    <button class="rdel" onclick="this.parentElement.remove()">&#215;</button>
+    <div class="row c2" style="margin-bottom:8px;">
+      <div><label>Порт загрузки</label><input placeholder="Shanghai, CN"></div>
+      <div><label>Порт выгрузки</label><input placeholder="Odesa, UA"></div>
+    </div>
+    <div class="row c2" style="margin-bottom:0;">
+      <div><label>Тип контейнера</label>
+        <select>
+          <option>20DV</option><option>40DV</option><option>40HC</option>
+          <option>20RF</option><option>40RF</option><option>LCL</option>
+        </select>
+      </div>
+      <div><label>Кол-во контейнеров</label><input type="number" placeholder="1" min="1" value="1"></div>
+    </div>
+  `;
+  document.getElementById('routes').appendChild(div);
+}
+
+// ===== COSTS =====
+function addCostRow(name = '', value = '', currency = 'USD', perUnit = true) {
+  const tbody = document.getElementById('costBody');
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td><input value="${String(name).replace(/"/g,'&quot;')}" placeholder="Название расхода"></td>
+    <td><input type="number" value="${value}" class="costValue" placeholder="0" min="0"></td>
+    <td>
+      <select class="currency">
+        <option value="USD">USD</option>
+        <option value="EUR">EUR</option>
+        <option value="UAH">UAH</option>
+      </select>
+    </td>
+    <td style="text-align:center;">
+      <input type="checkbox" class="perUnit" title="Умножать на кол-во контейнеров" ${perUnit ? 'checked' : ''}
+        style="width:auto;cursor:pointer;accent-color:var(--accent);">
+    </td>
+    <td><button class="del-btn" onclick="this.closest('tr').remove()">&#215;</button></td>
+  `;
+  tr.querySelector('.currency').value = currency;
+  tbody.appendChild(tr);
+}
+
+function loadTemplateCosts() {
+  document.getElementById('costBody').innerHTML = '';
+  const line = document.getElementById('line').value;
+  const transport = document.getElementById('transport').value;
+  if (!line) return;
+  const items = getTemplate(line, transport);
+  items.forEach(c => addCostRow(c, '', 'USD', true));
+  addCostRow('Простой авто (опционально)', '', 'USD', false);
+}
+
+// ===== CURRENCY =====
+function convertToUSD(val, cur) {
+  if (cur === 'EUR') return val * 1.19;
+  if (cur === 'UAH') return val / 40;
+  return val;
+}
+
+// ===== STORAGE =====
+let storageTotal = 0, storageCur = 'USD';
+
+function calculateStorage() {
+  const sv = document.getElementById('startDate').value;
+  const ev = document.getElementById('endDate').value;
+  if (!sv || !ev) { alert('Выбери обе даты'); return; }
+  const s = new Date(sv), e = new Date(ev);
+  const days = Math.max(0, Math.ceil((e - s) / (1000 * 60 * 60 * 24)));
+  const rate = parseFloat(document.getElementById('storageRate').value) || 0;
+  storageTotal = days * rate;
+  storageCur = document.getElementById('storageCurrency').value;
+  const res = document.getElementById('storageResult');
+  res.style.display = 'block';
+  res.innerHTML = `<span style="color:var(--muted);">Дней:</span> <strong>${days}</strong> &nbsp;|&nbsp; <span style="color:var(--muted);">Сумма:</span> <strong style="color:var(--accent);">${storageTotal.toFixed(2)} ${storageCur}</strong>`;
+}
+
+function addStorageCost() {
+  if (!storageTotal) { alert('Сначала посчитай хранение'); return; }
+  addCostRow('Хранение', storageTotal.toFixed(2), storageCur, false);
+}
+
+// ===== CALCULATE =====
+function calculateTotal() {
+  const rows = document.querySelectorAll('#costBody tr');
+  let totalPerUnit = 0, totalFixed = 0;
+  rows.forEach(row => {
+    const val = parseFloat(row.querySelector('.costValue')?.value) || 0;
+    const cur = row.querySelector('.currency')?.value || 'USD';
+    const perUnit = row.querySelector('.perUnit')?.checked;
+    const usd = convertToUSD(val, cur);
+    if (perUnit) totalPerUnit += usd; else totalFixed += usd;
+  });
+
+  let multiplier = 0;
+  document.querySelectorAll('.route-card').forEach(r => {
+    multiplier += parseInt(r.querySelector('input[type=number]')?.value) || 1;
+  });
+  if (multiplier < 1) multiplier = 1;
+
+  const margin = parseFloat(document.getElementById('margin').value) || 0;
+  const grand = totalPerUnit * multiplier + totalFixed + margin;
+  window.lastTotal = grand;
+
+  document.getElementById('totalBox').style.display = 'block';
+  document.getElementById('totalValue').textContent =
+    grand.toLocaleString('ru-RU', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' $';
+  document.getElementById('totalBreakdown').textContent =
+    `На ед. (×${multiplier}): ${(totalPerUnit * multiplier).toFixed(2)} + Фикс: ${totalFixed.toFixed(2)} + Маржа: ${margin.toFixed(2)}`;
+}
+
+// ===== SAVE =====
+function saveRecord() {
+  const costs = [];
+  document.querySelectorAll('#costBody tr').forEach(r => {
+    const inputs = r.querySelectorAll('input');
+    costs.push({
+      name: inputs[0]?.value || '',
+      value: parseFloat(r.querySelector('.costValue')?.value) || 0,
+      currency: r.querySelector('.currency')?.value || 'USD',
+      perUnit: r.querySelector('.perUnit')?.checked || false
+    });
+  });
+  const records = JSON.parse(localStorage.getItem('fc_history') || '[]');
+  records.unshift({
+    date: new Date().toLocaleDateString('ru-RU'),
+    client: document.getElementById('client').value,
+    booking: document.getElementById('booking').value,
+    line: document.getElementById('line').value,
+    transport: document.getElementById('transport').value,
+    total: window.lastTotal || 0,
+    margin: parseFloat(document.getElementById('margin').value) || 0,
+    costs
+  });
+  localStorage.setItem('fc_history', JSON.stringify(records.slice(0, 50)));
+  const btn = event.target;
+  const orig = btn.textContent;
+  btn.textContent = '✓ Сохранено'; btn.style.background = 'var(--green)'; btn.style.color = '#000';
+  setTimeout(() => { btn.textContent = orig; btn.style.background = ''; btn.style.color = ''; }, 1600);
+}
+
+// ===== HISTORY =====
+function renderHistory() {
+  const records = JSON.parse(localStorage.getItem('fc_history') || '[]');
+  const tbody = document.getElementById('historyBody');
+  tbody.innerHTML = '';
+  if (!records.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="color:var(--muted);text-align:center;padding:24px;">История пуста</td></tr>';
+    return;
+  }
+  records.forEach((r, i) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${r.date}</td>
+      <td>${r.client || '—'}</td>
+      <td style="font-family:monospace;">${r.booking || '—'}</td>
+      <td><span class="badge badge-amber">${r.line || '—'}</span></td>
+      <td>${r.transport || '—'}</td>
+      <td style="font-weight:600;color:var(--accent);">${(r.total || 0).toFixed(2)} $</td>
+      <td><button class="btn btn-secondary btn-sm" onclick="loadRecord(${i})">&#8617; Загрузить</button></td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function loadRecord(i) {
+  const records = JSON.parse(localStorage.getItem('fc_history') || '[]');
+  const r = records[i];
+  if (!r) return;
+  document.getElementById('client').value = r.client || '';
+  document.getElementById('booking').value = r.booking || '';
+  document.getElementById('margin').value = r.margin || 0;
+  document.getElementById('costBody').innerHTML = '';
+  (r.costs || []).forEach(c => addCostRow(c.name, c.value, c.currency, c.perUnit));
+  // switch to calc tab
+  document.querySelectorAll('.tab')[0].click();
+}
+
+function clearHistory() {
+  if (confirm('Очистить всю историю?')) {
+    localStorage.removeItem('fc_history');
+    renderHistory();
+  }
+}
+
+// ===== EXCEL EXPORT =====
+function buildSheetData(full) {
+  const client = document.getElementById('client').value || '';
+  const booking = document.getElementById('booking').value || '';
+  const line = document.getElementById('line').value || '';
+  const transport = document.getElementById('transport').value || '';
+  const total = window.lastTotal || 0;
+  const margin = parseFloat(document.getElementById('margin').value) || 0;
+
+  const rows = [
+    ['FREIGHT CALCULATOR PRO'],
+    [],
+    ['Клиент:', client, '', 'Линия:', line],
+    ['Букинг:', booking, '', 'Транспорт:', transport],
+    ['Дата:', new Date().toLocaleDateString('ru-RU')],
+    []
+  ];
+
+  if (full) {
+    rows.push(['Название расхода', 'Сумма', 'Валюта', 'Сумма USD', 'На ед. контейнер']);
+  } else {
+    rows.push(['Название расхода', 'Сумма USD']);
+  }
+
+  document.querySelectorAll('#costBody tr').forEach(r => {
+    const inputs = r.querySelectorAll('input');
+    const name = inputs[0]?.value || '';
+    const val = parseFloat(r.querySelector('.costValue')?.value) || 0;
+    const cur = r.querySelector('.currency')?.value || 'USD';
+    const perUnit = r.querySelector('.perUnit')?.checked ? 'Да' : 'Нет';
+    const usd = parseFloat(convertToUSD(val, cur).toFixed(2));
+    if (full) rows.push([name, val, cur, usd, perUnit]);
+    else rows.push([name, usd]);
+  });
+
+  rows.push([]);
+  rows.push(['Маржа (USD)', parseFloat(margin.toFixed(2))]);
+  rows.push(['ИТОГО USD', parseFloat(total.toFixed(2))]);
+  return rows;
+}
+
+function exportClientExcel() {
+  try {
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(buildSheetData(false));
+    ws['!cols'] = [{wch: 38}, {wch: 14}];
+    XLSX.utils.book_append_sheet(wb, ws, 'Клиент');
+    XLSX.writeFile(wb, 'freight_client_' + Date.now() + '.xlsx');
+  } catch(e) {
+    alert('Ошибка экспорта: ' + e.message);
+    console.error(e);
+  }
+}
+
+function exportFullExcel() {
+  try {
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(buildSheetData(true));
+    ws['!cols'] = [{wch: 38}, {wch: 12}, {wch: 8}, {wch: 13}, {wch: 18}];
+    XLSX.utils.book_append_sheet(wb, ws, 'Полный');
+    XLSX.writeFile(wb, 'freight_full_' + Date.now() + '.xlsx');
+  } catch(e) {
+    alert('Ошибка экспорта: ' + e.message);
+    console.error(e);
+  }
+}
+</script>
+</body>
+</html>
